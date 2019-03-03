@@ -1,0 +1,134 @@
+package main
+
+import (
+	"errors"
+	"html/template"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"regexp"
+)
+
+// Wikiのデータ構造
+type Page struct {
+	Title string //タイトル
+	Body  []byte // タイトルの中身
+}
+
+// パスのアドレスを設定して文字の長さを定数として持つ
+const lenPath = len("/view/")
+
+// テンプレートファイルの配列
+var templates = make(map[string]*template.Template)
+
+// 正規表現でURLを生成できる大文字小文字の英字と数字を判別する
+var titleValidator = regexp.MustCompile("^[a-zA-Z0-9]+$")
+
+// 初期化関数
+func init() {
+	for _, templ := range []string{"view", "edit"} {
+		t := template.Must(template.ParseFiles(templ + ".html"))
+		templates[templ] = t
+	}
+}
+
+// タイトルのチェックを行う
+func getTitle(w http.ResponseWriter, r *http.Request) (title string, err error) {
+	title = r.URL.Path[lenPath:]
+	if !titleValidator.MatchString(title) {
+		http.NotFound(w, r)
+		err = errors.New("Invalid Page Title")
+		log.Print(err)
+	}
+	return
+}
+
+func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
+	p, err := loadPage(title)
+	if err != nil {
+		// 存在しない場合、editにリダイレクト
+		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+		return
+	}
+	renderTemplate(w, "view", p)
+}
+
+func editHandler(w http.ResponseWriter, r *http.Request, title string) {
+	p, err := loadPage(title)
+	if err != nil {
+		p = &Page{Title: title}
+	}
+	renderTemplate(w, "edit", p)
+}
+
+func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
+	body := r.FormValue("body")
+
+	p := &Page{Title: title, Body: []byte(body)}
+	err := p.save()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+
+func topHandler(w http.ResponseWriter, r *http.Request) {
+	data := "TestPage"
+	t := template.Must(template.ParseFiles("top.html"))
+	err := t.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		title := r.URL.Path[lenPath:]
+		if !titleValidator.MatchString(title) {
+			http.NotFound(w, r)
+			err := errors.New("Invalid Page Title")
+			log.Print(err)
+			return
+		}
+		fn(w, r, title)
+	}
+}
+
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+	// edit.html の中にはTitleやBody
+	err := templates[tmpl].Execute(w, p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// テキストファイルの保存
+func (p *Page) save() error {
+	// タイトルの名前でテキストファイルを作成して保存します。
+	filename := p.Title + ".txt"
+	// 0600は、テキストデータを書き込んだり読み込んだりする権限を設定しています。
+	return ioutil.WriteFile(filename, p.Body, 0600)
+}
+
+// タイトルからファイル名を読み込み新しいPage型のポインタを返す
+func loadPage(title string) (*Page, error) {
+	filename := title + ".txt"
+	body, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Page{Title: title, Body: body}, err
+}
+
+func main() {
+	http.HandleFunc("/view/", makeHandler(viewHandler))
+	http.HandleFunc("/edit/", makeHandler(editHandler))
+	http.HandleFunc("/save/", makeHandler(saveHandler))
+	http.HandleFunc("/top/", topHandler)
+	http.ListenAndServe(":8080", nil)
+
+}
