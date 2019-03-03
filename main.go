@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 // Wikiのデータ構造
@@ -23,6 +24,9 @@ var templates = make(map[string]*template.Template)
 
 // 正規表現でURLを生成できる大文字小文字の英字と数字を判別する
 var titleValidator = regexp.MustCompile("^[a-zA-Z0-9]+$")
+
+//
+const expend_string = ".txt"
 
 // 初期化関数
 func init() {
@@ -75,9 +79,33 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 }
 
 func topHandler(w http.ResponseWriter, r *http.Request) {
-	data := "TestPage"
+	// main.goがいる階層の.txtデータを取得します
+	files, err := ioutil.ReadDir("./")
+	if err != nil {
+		err = errors.New("所定のディレクトリ内にテキストファイルがありません")
+		log.Print(err)
+		return
+	}
+
+	var paths []string    //テキストデータの名前
+	var fileName []string //テキストデータのファイル名
+
+	for _, file := range files {
+		//対象となる.txtデータを取得する
+		if strings.HasSuffix(file.Name(), expend_string) {
+			//テキストデータの.txtでスライスしたものをfileNameに入れる
+			fileName = strings.Split(file.Name(), expend_string)
+			paths = append(paths, fileName[0])
+		}
+	}
+	// パスがなかった場合
+	if paths == nil {
+		err = errors.New("テキストファイルが存在しません")
+		log.Print(err)
+	}
+
 	t := template.Must(template.ParseFiles("top.html"))
-	err := t.Execute(w, data)
+	err = t.Execute(w, paths)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

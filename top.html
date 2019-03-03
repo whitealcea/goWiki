@@ -1,2 +1,4 @@
 <h1>Wikiページ</h1>
+{{range .}}
 <p><a href="/view/{{. |html|}}">{{.}}</a>[<a href="/edit/{{. |html|}}">edit</a>]</p>
+{{end}}
