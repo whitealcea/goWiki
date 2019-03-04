@@ -103,7 +103,7 @@ func topHandler(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 	}
 
-	t := template.Must(template.ParseFiles("top.html"))
+	t := template.Must(template.ParseFiles("./web/template/top.html"))
 	err = t.Execute(w, paths)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
