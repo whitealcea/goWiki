@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// Wikiのデータ構造
+// Page Wikiのデータ構造
 type Page struct {
 	Title string //タイトル
 	Body  []byte // タイトルの中身
@@ -25,13 +25,12 @@ var templates = make(map[string]*template.Template)
 // 正規表現でURLを生成できる大文字小文字の英字と数字を判別する
 var titleValidator = regexp.MustCompile("^[a-zA-Z0-9]+$")
 
-//
-const expend_string = ".txt"
+const expendString = ".txt"
 
 // 初期化関数
 func init() {
 	for _, templ := range []string{"view", "edit"} {
-		t := template.Must(template.ParseFiles(templ + ".html"))
+		t := template.Must(template.ParseFiles("./web/template/" + templ + ".html"))
 		templates[templ] = t
 	}
 }
@@ -92,9 +91,9 @@ func topHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, file := range files {
 		//対象となる.txtデータを取得する
-		if strings.HasSuffix(file.Name(), expend_string) {
+		if strings.HasSuffix(file.Name(), expendString) {
 			//テキストデータの.txtでスライスしたものをfileNameに入れる
-			fileName = strings.Split(file.Name(), expend_string)
+			fileName = strings.Split(file.Name(), expendString)
 			paths = append(paths, fileName[0])
 		}
 	}
