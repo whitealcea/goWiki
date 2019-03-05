@@ -79,7 +79,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 
 func topHandler(w http.ResponseWriter, r *http.Request) {
 	// main.goがいる階層の.txtデータを取得します
-	files, err := ioutil.ReadDir("./")
+	files, err := ioutil.ReadDir("./web/static/txt/")
 	if err != nil {
 		err = errors.New("所定のディレクトリ内にテキストファイルがありません")
 		log.Print(err)
@@ -135,14 +135,14 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 // テキストファイルの保存
 func (p *Page) save() error {
 	// タイトルの名前でテキストファイルを作成して保存します。
-	filename := p.Title + ".txt"
+	filename := "./web/static/txt/" + p.Title + ".txt"
 	// 0600は、テキストデータを書き込んだり読み込んだりする権限を設定しています。
 	return ioutil.WriteFile(filename, p.Body, 0600)
 }
 
 // タイトルからファイル名を読み込み新しいPage型のポインタを返す
 func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
+	filename := "./web/static/txt/" + title + ".txt"
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
